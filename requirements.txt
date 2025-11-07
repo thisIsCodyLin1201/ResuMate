@@ -1,0 +1,26 @@
+# ===== ResuMate System Dependencies =====
+
+# --- Core Frameworks ---
+fastapi==0.115.5
+uvicorn==0.32.0
+
+# --- Frontend ---
+streamlit==1.39.0
+
+# --- NLP & Machine Learning ---
+sentence-transformers==2.7.0
+scikit-learn==1.5.2
+
+# --- File Parsing ---
+pdfminer.six==20221105
+docx2txt==0.8
+
+# --- Utilities ---
+requests==2.32.3
+
+# --- Optional: for scheduling or job automation (if you add crawler auto-update) ---
+apscheduler==3.10.4
+
+# === Notes ===
+# 已移除 pyarrow / datasets / pandas 等大型依賴，避免 Windows C++ build 問題。
+# 若未來需要 DataFrame 處理，可再手動安裝 pandas。
