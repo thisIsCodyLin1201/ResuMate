@@ -212,10 +212,10 @@ with bottom_right:
                 {rank_html}
                 <div class="job-content">
                     <h4><a href="{url}" target="_blank">{title}</a></h4>
-                    <p>🏢 公司：{company}</p>
-                    <p>📍 地點：{location}</p>
-                    <p>💰 薪資：{salary}</p>
-                    <p>🕒 更新日期：{update_date}</p>
+                    <p><strong>公司：</strong>{company}</p>
+                    <p><strong>地點：</strong>{location}</p>
+                    <p><strong>薪資：</strong>{salary}</p>
+                    <p><strong>更新日期：</strong>{update_date}</p>
                 </div>
             </div>
             """, unsafe_allow_html=True)
