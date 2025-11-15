@@ -12,25 +12,8 @@ st.markdown("""
     .main {
         background-color: white !important;
     }
-    .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 0rem;
-        max-height: 100vh;
-        overflow: hidden;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
     .stFileUploader > label {
         display: none !important;
-    }
-    .header-section {
-        background-color: transparent;
-        padding: 10px 20px 10px 20px;
-        border-radius: 0;
-        color: #333;
-    }
-    .content-section {
-        padding: 10px 30px 30px 30px;
     }
     .title-text {
         font-size: 48px;
@@ -75,13 +58,6 @@ st.markdown("""
         gap: 15px;
         align-items: start;
     }
-    .rank-badge {
-        font-size: 36px;
-        font-weight: bold;
-        min-width: 50px;
-        text-align: center;
-        flex-shrink: 0;
-    }
     .rank-number {
         color: white;
         border-radius: 50%;
@@ -122,12 +98,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- 標題區（橘色 header） ----------
-st.markdown('<div class="header-section">', unsafe_allow_html=True)
+# ---------- 標題區 ----------
 header_col1, header_col2 = st.columns([3, 1])
 with header_col1:
     st.markdown('<div class="title-text">💼 ResuMate</div>', unsafe_allow_html=True)
     st.markdown('<p style="font-size: 24px; margin: 0;">上傳你的履歷，我們會幫你找到適合的職缺！</p>', unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------- 從後端抓 filter 選項 ----------
 @st.cache_data
@@ -146,8 +123,6 @@ areas_map, industries_map = load_filters()
 # human friendly label（現在先直接用 key，之後你可以換成中文）
 area_options = ["不限地區"] + list(areas_map.keys())
 industry_options = ["不限產業"] + list(industries_map.keys())
-
-st.markdown('<div class="content-section">', unsafe_allow_html=True)
 
 # ---------- 上方：篩選條件區域 ----------
 st.markdown("### 🔍 篩選條件")
@@ -244,5 +219,3 @@ with bottom_right:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
