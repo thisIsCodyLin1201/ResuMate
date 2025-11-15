@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # 輕量通用模型（第一次會自動下載）
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 
 def _ensure_text(s: str | None) -> str:
@@ -27,7 +27,7 @@ def match_resume_to_jobs(
       - company / location / salary / update_date (可選)
     回傳：原 job 欄位 + score (float)
     """
-    # 準備描述文本；若描述缺失，用 job_title/company 當備援，避免空字串導致全 0
+    ## 準備文本資料
     texts = []
     valid_idx = []
     for i, j in enumerate(jobs):
@@ -46,18 +46,29 @@ def match_resume_to_jobs(
         texts.append(desc if desc else "N/A")
         valid_idx.append(i)
 
-    # 向量化
+    ## 向量化
     resume_vec = _model.encode([resume_text], convert_to_numpy=True, normalize_embeddings=True)
     job_vecs = _model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
 
-    # 相似度（cosine）
-    sims = cosine_similarity(resume_vec, job_vecs)[0]  # shape: (n_jobs,)
+    ## 語意相似度 (semantic_score)
+    sims = cosine_similarity(resume_vec, job_vecs)[0]
 
-    # 把分數貼回原物件
-    for idx, score in zip(valid_idx, sims):
-        jobs[idx]["score"] = float(round(float(score), 4))
+    ## 關鍵詞相似度 (keyword_score)
+    for idx, j in enumerate(jobs):
+        job_text = (j.get("description") or "") + " " + (j.get("job_title") or "")
+        # 計算關鍵詞交集比例
+        resume_words = set(resume_text.lower().split())
+        job_words = set(job_text.lower().split())
+        overlap = len(resume_words & job_words)
+        keyword_score = overlap / (len(resume_words) + 1e-6)  # 避免除 0
 
-    # 依分數排序並截取 top_k
+        #加權平均結合兩種分數
+        semantic_score = sims[idx]
+        final_score = 0.7 * semantic_score + 0.3 * keyword_score
+
+        j["score"] = round(final_score, 4)
+
     ranked = sorted(jobs, key=lambda x: x.get("score", 0.0), reverse=True)
     return ranked[: top_k]
+
 
