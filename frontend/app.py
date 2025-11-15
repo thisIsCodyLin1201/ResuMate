@@ -13,21 +13,21 @@ st.markdown("""
         background-color: white !important;
     }
     .main .block-container {
-        padding-top: 0rem;
+        padding-top: 2rem;
         padding-bottom: 0rem;
         max-height: 100vh;
         overflow: hidden;
-        padding-left: 0rem;
-        padding-right: 0rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
     .stFileUploader > label {
         display: none !important;
     }
     .header-section {
-        background-color: transparent;   /* 或直接刪掉這行 */
-        padding: 20px 30px 10px 30px;   /* 看你要不要留一點內距 */
-        border-radius: 0;               /* 不要圓角 */
-        color: #333;                    /* 文字顏色改回深色 */
+        background-color: transparent;
+        padding: 10px 20px 10px 20px;
+        border-radius: 0;
+        color: #333;
     }
     .content-section {
         padding: 10px 30px 30px 30px;
@@ -71,6 +71,43 @@ st.markdown("""
         border-radius: 8px;
         margin-bottom: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 15px;
+        align-items: start;
+    }
+    .rank-badge {
+        font-size: 36px;
+        font-weight: bold;
+        min-width: 50px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .rank-number {
+        color: white;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+    .rank-1 {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    }
+    .rank-2 {
+        background: linear-gradient(135deg, #C0C0C0 0%, #808080 100%);
+    }
+    .rank-3 {
+        background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+    }
+    .rank-other {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .job-content {
+        flex: 1;
     }
     .job-card h4 {
         font-size: 24px !important;
@@ -92,16 +129,6 @@ with header_col1:
     st.markdown('<div class="title-text">💼 ResuMate</div>', unsafe_allow_html=True)
     st.markdown('<p style="font-size: 24px; margin: 0;">上傳你的履歷，我們會幫你找到適合的職缺！</p>', unsafe_allow_html=True)
 
-with header_col2:
-    btn_col1, btn_col2, btn_col3 = st.columns(3)
-    # with btn_col1:
-    #     st.button("Historical View", key="btn1", help="歷史記錄")
-    # with btn_col2:
-    #     st.button("👤", key="btn2", help="使用者")
-    # with btn_col3:
-    #     st.button("⚙️", key="btn3", help="設定")
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ---------- 從後端抓 filter 選項 ----------
 @st.cache_data
 def load_filters():
@@ -122,7 +149,7 @@ industry_options = ["不限產業"] + list(industries_map.keys())
 
 st.markdown('<div class="content-section">', unsafe_allow_html=True)
 
-# ---------- 上方 filter 列（對應右邊 wireframe 的欄位） ----------
+# ---------- 上方：篩選條件區域 ----------
 st.markdown("### 🔍 篩選條件")
 fcol1, fcol2, fcol3 = st.columns([2, 1, 1])
 
@@ -135,11 +162,14 @@ with fcol3:
     industry_choice = st.selectbox("產業", industry_options)
     industry_key = None if industry_choice == "不限產業" else industry_choice
 
-# ---------- 左右主內容 ----------
-left_col, right_col = st.columns([1, 1])
+st.markdown("---")
 
-# 左：上傳履歷 + 按鈕
-with left_col:
+# ---------- 下方：左邊上傳區 + 右邊推薦職缺 ----------
+bottom_left, bottom_right = st.columns([1, 1])
+
+# 左下：上傳履歷區
+with bottom_left:
+    st.markdown("### 📤 上傳履歷")
     uploaded_file = st.file_uploader("上傳履歷檔案", type=["pdf", "docx", "txt"], label_visibility="collapsed")
 
     if st.button("開始配對", type="primary", use_container_width=True):
@@ -176,13 +206,13 @@ with left_col:
                             detail = res.text
                         st.error(f"❌ 後端錯誤 {res.status_code}: {detail}")
 
-# 右：顯示職缺卡片
-with right_col:
+# 右下：推薦職缺
+with bottom_right:
+    st.markdown("### 📝 推薦職缺")
     results = st.session_state.get("results", [])
     if not results:
         st.info("👈 請先上傳履歷並點擊「開始配對」")
     else:
-        st.markdown("### 📝 推薦職缺")
         for i, r in enumerate(results, 1):
             title = r.get("job_title", "未命名職缺")
             company = r.get("company", "未提供公司名稱")
@@ -191,15 +221,27 @@ with right_col:
             score = r.get("score", 0.0)
             url = r.get("job_url", "#")
             update_date = r.get("update_date", "")
+            
+            # 排名顯示：全部用數字圓圈，前三名用特殊顏色
+            if i == 1:
+                rank_html = '<div class="rank-number rank-1">1</div>'
+            elif i == 2:
+                rank_html = '<div class="rank-number rank-2">2</div>'
+            elif i == 3:
+                rank_html = '<div class="rank-number rank-3">3</div>'
+            else:
+                rank_html = f'<div class="rank-number rank-other">{i}</div>'
 
             st.markdown(f"""
             <div class="job-card">
-                <h4>{i}. <a href="{url}" target="_blank">{title}</a></h4>
-                <p>🏢 公司：{company}</p>
-                <p>📍 地點：{location}</p>
-                <p>💰 薪資：{salary}</p>
-                <p>🕒 更新日期：{update_date}</p>
-                <p>⭐ 匹配度：{score:.4f}</p>
+                {rank_html}
+                <div class="job-content">
+                    <h4><a href="{url}" target="_blank">{title}</a></h4>
+                    <p>🏢 公司：{company}</p>
+                    <p>📍 地點：{location}</p>
+                    <p>💰 薪資：{salary}</p>
+                    <p>🕒 更新日期：{update_date}</p>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
