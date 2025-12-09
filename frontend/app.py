@@ -19,22 +19,22 @@ st.markdown("""
         font-size: 48px;
         font-weight: bold;
     }
-    [data-testid="column"] {
-        height: 65vh;
-        padding: 20px;
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        background-color: #f9f9f9;
-    }
-    [data-testid="column"]:first-child {
-        overflow-y: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-    [data-testid="column"]:last-child {
-        overflow-y: auto;
-        max-height: 65vh;
-    }
+    # [data-testid="column"] {
+    #     height: 65vh;
+    #     padding: 20px;
+    #     border: 1px solid #e0e0e0;
+    #     border-radius: 10px;
+    #     background-color: #f9f9f9;
+    # }
+    # [data-testid="column"]:first-child {
+    #     overflow-y: hidden;
+    #     display: flex;
+    #     flex-direction: column;
+    # }
+    # [data-testid="column"]:last-child {
+    #     overflow-y: auto;
+    #     max-height: 65vh;
+    # }
     .stButton > button[kind="primary"] {
         height: 60px !important;
         font-size: 32px !important;
@@ -129,7 +129,7 @@ st.markdown("### 🔍 篩選條件")
 fcol1, fcol2, fcol3 = st.columns([2, 1, 1])
 
 with fcol1:
-    keyword = st.text_input("關鍵字", value="資料分析")
+    keyword = st.text_input("關鍵字", placeholder="請輸入關鍵字")
 with fcol2:
     area_choice = st.selectbox("地區", area_options)
     area_key = None if area_choice == "不限地區" else area_choice
@@ -158,7 +158,7 @@ with bottom_left:
                     "area_key": area_key,
                     "industry_key": industry_key,
                     "pages": 2,           # 想抓幾頁結果可以調整
-                    "fetch_detail": False,
+                    #"fetch_detail": False,
                     "top_k": 20,
                 }
 
