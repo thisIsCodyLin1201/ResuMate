@@ -1,14 +1,22 @@
+# backend/main.py
 from __future__ import annotations
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, Query
+from fastapi import FastAPI, UploadFile, File, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.utils.parser import extract_text_from_resume
 from backend.crawler.crawler_104 import get_jobs_data
 from backend.nlp.matcher import match_resume_to_jobs
+from backend.db import init_all_dbs, save_parsed_resume, save_jobs, save_match_results
 
 app = FastAPI(title="ResuMate API", version="0.2")
+
+# 啟動時建三個 DB 的表
+@app.on_event("startup")
+def on_startup():
+    init_all_dbs()
+
 
 # 若前端非同源，開 CORS（依你的前端來源調整）
 app.add_middleware(
@@ -65,7 +73,7 @@ INDUSTRY_MAP = {
     "一般服務業": "1009000000",
     "電子資訊／軟體／半導體相關業": "1001000000",
     "一般製造業": "1002000000",
-    "農林漁牧水電資源業": "1014000000", 
+    "農林漁牧水電資源業": "1014000000",
     "運輸物流及倉儲": "1010000000",
     "政治宗教及社福相關業": "1013000000",
     "金融投顧及保險業": "1004000000",
@@ -74,37 +82,19 @@ INDUSTRY_MAP = {
     "醫療保健及環境衛生業": "1012000000",
     "礦業及土石採取業": "1015000000",
     "住宿／餐飲服務業": "1016000000",
-
-
-
-    # "經營/人資類": "2001000000",
-    # "行政/總務/法務類": "2002000000",
-    # "財會/金融類": "2003000000",
-    # "行銷／企劃／專案管理類": "2004000000",
-    # "客服／門市／業務／貿易類": "2005000000",
-    # "餐飲／旅遊 ／美容美髮類": "2006000000",
-    # "資訊軟體系統類": "2007000000",
-    # "研發相關類": "2008000000",
-    # "生產製造／品管／環衛類": "2009000000",
-    # "操作／技術／維修類": "2010000000",
-    # "資材／物流／運輸類": "2011000000",
-    # "營建／製圖類": "2012000000",
-    # "傳播藝術／設計類": "2013000000",
-    # "文字／傳媒工作類": "2014000000",
-    # "醫療／保健服務類": "2015000000",
-    # "學術／教育／輔導類": "2016000000",
-    # "軍警消／保全類": "2017000000",
-    # "其他職類": "2018000000",
 }
+
 
 @app.get("/")
 def root():
     return {"message": "ResuMate API is running."}
 
+
 @app.get("/filters")
 def filters():
     """提供前端下拉選單的地區/產業對照（key -> 104 代碼）。"""
     return {"areas": AREA_MAP, "industries": INDUSTRY_MAP}
+
 
 @app.post("/match")
 async def match_resume(
@@ -113,13 +103,13 @@ async def match_resume(
     area_key: Optional[str] = Query(None),
     industry_key: Optional[str] = Query(None),
     pages: int = Query(1, ge=1, le=3),
-    fetch_detail: bool = Query(False),   # 先用 False 比較穩
+    fetch_detail: bool = Query(True),   # ✅ 讓內頁有抓，才會有 condition
     top_k: int = Query(20, ge=1, le=50),
 ):
     """
     上傳履歷 → 抓取符合 filter 的職缺 → 計算匹配分數。
     回傳每筆包含：
-      job_title / job_url / description / company / location / salary / update_date / score
+      job_title / job_url / description / company / location / salary / update_date / score / condition
     """
     # 1) 解析履歷
     file.file.seek(0)
@@ -127,12 +117,18 @@ async def match_resume(
     if not resume_text.strip():
         raise HTTPException(
             status_code=400,
-            detail="讀不到履歷文字：請改傳 .txt / .docx，或是可擷取文字的 PDF（非掃描影像）。"
+            detail="讀不到履歷文字：請改傳 .txt / .docx，或是可擷取文字的 PDF（非掃描影像）。",
         )
+
+    # ⭐ 1-1) 先把解析後的履歷文字存進 resume.db，拿到 resume_id
+    resume_id = save_parsed_resume(
+        filename=file.filename or "uploaded_resume",
+        resume_text=resume_text,
+    )
 
     # 2) 依過濾抓職缺
     area = AREA_MAP.get(area_key) if area_key else None
-    ind  = INDUSTRY_MAP.get(industry_key) if industry_key else None
+    ind = INDUSTRY_MAP.get(industry_key) if industry_key else None
 
     try:
         jobs = get_jobs_data(
@@ -140,7 +136,7 @@ async def match_resume(
             pages=pages,
             area=area,
             industry=ind,
-            fetch_detail=fetch_detail,
+            fetch_detail=fetch_detail,   # ✅ 這樣 crawler 才會去打內頁
         )
     except Exception as e:
         print("[/match] get_jobs_data error:", e)
@@ -148,6 +144,13 @@ async def match_resume(
 
     if not jobs:
         return {"recommendations": []}
+
+    # ⭐ 2-1) 把這次爬回來的職缺存進 job.db
+    try:
+        inserted = save_jobs(jobs, keyword=keyword, area=area, industry=ind)
+        print(f"[job.db] inserted {inserted} jobs")
+    except Exception as e:
+        print("[/match] save_jobs error:", e)
 
     # 3) 匹配排序
     try:
@@ -161,6 +164,15 @@ async def match_resume(
         except Exception:
             pass
 
+    # ⭐ 3-1) 把這次媒合結果存進 match.db
+    try:
+        count = save_match_results(resume_id, ranked)
+        print(f"[match.db] inserted {count} match rows for resume {resume_id}")
+    except Exception as e:
+        print("[/match] save_match_results error:", e)
+
+    #（你之前在 matcher 裡有印 TOP 1 JOB，會照樣印）
     return {"recommendations": ranked}
+
 
 
