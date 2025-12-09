@@ -21,7 +21,7 @@ try:
 except Exception:
     PdfReader = None
 
-
+#拆檔名
 def _ext(name: str) -> str:
     return os.path.splitext(name or "")[1].lower()
 
@@ -60,9 +60,9 @@ def extract_text_from_resume(file: UploadFile) -> str:
     任一流程失敗都回空字串（不拋例外）。
     """
     try:
-        file.file.seek(0)
-        raw = file.file.read()
-        ext = _ext(file.filename or "")
+        file.file.seek(0) #把檔案指標移回開頭
+        raw = file.file.read() #一次把整份檔案讀進 bytes
+        ext = _ext(file.filename or "") #決定他是 .txt / .docx / .pdf / 其他
 
         # txt
         if ext == ".txt":

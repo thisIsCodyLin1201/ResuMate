@@ -63,12 +63,21 @@ def match_resume_to_jobs(
         keyword_score = overlap / (len(resume_words) + 1e-6)  # 避免除 0
 
         #加權平均結合兩種分數
-        semantic_score = sims[idx]
+        semantic_score = float(sims[idx])
         final_score = 0.7 * semantic_score + 0.3 * keyword_score
 
         j["score"] = round(final_score, 4)
 
     ranked = sorted(jobs, key=lambda x: x.get("score", 0.0), reverse=True)
-    return ranked[: top_k]
 
+
+    #######################
+    top_jobs = ranked[: top_k]
+
+    # ✅ 只印第一名
+    if top_jobs:
+        print("TOP 1 JOB:", top_jobs[0])
+
+    #######################
+    return ranked[: top_k]
 
